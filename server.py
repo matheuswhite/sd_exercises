@@ -1,146 +1,71 @@
-from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
+from flask import Flask
+from flask import request
+from flask import abort
 import json
+app = Flask(__name__)
 
-PORT_NUMBER = 8000
+#run server in localhost
+#FLASK_APP=server.py flask run
 
-#This class will handles any incoming request from
-#the browser 
-class Server(BaseHTTPRequestHandler):
+#run server in IPv6
+#FLASK_APP=server.py flask run --host=your-ipv6
 
-	#Handler for the GET requests
-	def do_GET(self):
-		root_dir = '.'
+@app.route('/')
+def index():
+	return 'My awersome page!'
 
-		try:
-			if self.path.endswith('.json'):
-				f = open(root_dir + self.path) #open requested file
 
-				#send code 200 response
-				self.send_response(200)
+@app.route('/university', methods=['GET'])
+def get():
+	with open('content.json', 'r') as json_file:
+		json_data = json.load(json_file)
+	text = '<html><body><pre>'
+	for university in json_data["university"]:
+		text += university + "\n"
+	text += '</pre></body></html>'
+	return text
 
-				#send header first
-				self.send_header('Content-type','text-html')
-				self.end_headers()
 
-				#send file content to client
-				self.wfile.write(f.read())
-				f.close()
-				return
-			elif self.path.endswith('.html'):
-				f = open(root_dir + self.path) #open requested file
+@app.route('/university', methods=['POST'])
+def post():
+	with open('content.json', 'r+') as json_file:
+		json_data = json.load(json_file)
+		json_data["university"].append(request.form['name'])
+		json_file.seek(0)
+		json_file.write(json.dumps(json_data))
+		json_file.truncate()
+	return 'Content Update!'
 
-				#send code 200 response
-				self.send_response(200)
 
-				#send header first
-				self.send_header('Content-type','text-html')
-				self.end_headers()
+@app.route('/university', methods=['PUT'])
+def put():
+	with open('content.json', 'r+') as json_file:
+		json_data = json.load(json_file)
+		i = request.form['index']
+		name = request.form['name']
 
-				#send file content to client
-				self.wfile.write(f.read())
-				f.close()
-				return
+		if int(i) >= len(json_data['university']):
+			json_data["university"].append(name)
+		else:
+			json_data['university'][int(i)] = name
 
-		except IOError:
-			self.send_error(404, 'file not found')
+		json_file.seek(0)
+		json_file.write(json.dumps(json_data))
+		json_file.truncate()
+	return 'Content Update!'
 
-	def do_POST(self):
-		root_dir = '.'
 
-		try:
-			if self.path.endswith('.json'):
-				f = open(root_dir + self.path) #open requested file
+@app.route('/university/<int:i>', methods=['DELETE'])
+def delete(i):
+	with open('content.json', 'r+') as json_file:
+		json_data = json.load(json_file)
 
-				#send code 200 response
-				self.send_response(200)
-
-				#send header first
-				self.send_header('Content-type','text-html')
-				self.end_headers()
-
-				content_length = int(self.headers['Content-Length'])
-				file_content = self.rfile.read(content_length)
-
-		        # Do what you wish with file_content
-		        print file_content
-
-				#send file content to client
-				self.wfile.write("Content updated!")
-				f.close()
-				return
-
-		except IOError:
-			self.send_error(404, 'file not found')
-
-	def do_PUT(self):
-		root_dir = '.'
-
-		try:
-			f = open(root_dir + self.path, "r+") #open requested file
-			f.seek(0)
-			f.write(self.rfile.read())
-			f.truncate()
-			f.close()
-
-		except IOError:
-			f = open(root_dir + self.path, "w")
-			f.write('''write something''')
-			f.close()
-
-		#send code 200 response
-		self.send_response(200)
-
-		#send header first
-		self.send_header('Content-type','text-html')
-		self.end_headers()
-
-		self.wfile.write("File created with success")
-
-	def do_DELETE(self):
-		root_dir = '.'
-
-		try:
-			if self.path.endswith('.json'):
-				f = open(root_dir + self.path) #open requested file
-
-				#send code 200 response
-				self.send_response(200)
-
-				#send header first
-				self.send_header('Content-type','text-html')
-				self.end_headers()
-
-				#send file content to client
-				self.wfile.write(f.read())
-				f.close()
-				return
-			elif self.path.endswith('.html'):
-				f = open(root_dir + self.path) #open requested file
-
-				#send code 200 response
-				self.send_response(200)
-
-				#send header first
-				self.send_header('Content-type','text-html')
-				self.end_headers()
-
-				#send file content to client
-				self.wfile.write(f.read())
-				f.close()
-				return
-
-		except IOError:
-			self.send_error(404, 'file not found')
-
-try:
-	#Create a web server and define the handler to manage the
-	#incoming request
-	server = HTTPServer(('localhost', PORT_NUMBER), Server)
-	print 'Started httpserver on port ' , PORT_NUMBER
-	
-	#Wait forever for incoming htto requests
-	server.serve_forever()
-
-except KeyboardInterrupt:
-	print '^C received, shutting down the web server'
-	server.socket.close()
+		if i < len(json_data['university']):
+			university = json_data['university'][i]
+			json_data["university"].remove(university)
+			json_file.seek(0)
+			json_file.write(json.dumps(json_data))
+			json_file.truncate()
+			return 'Content Update!'
+		else:
+			abort(404)

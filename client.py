@@ -1,12 +1,24 @@
-import httplib
+import requests
 
-ip = "127.0.0.1"
-port = 8000
+url = 'http://127.0.0.1:5000/university'
+#url = 'http://[::1]:5000/university'
 
-conn = httplib.HTTPConnection(ip, port)
-conn.request("GET", "/index.html")
-r1 = conn.getresponse()
-print r1.status, r1.reason
-data1 = r1.read()
-print data1
-conn.close()
+req = requests.get(url)
+print req.status_code
+print req.text
+
+req = requests.post(url, data={'name': 'Universidad de Chile'})
+print req.status_code
+print req.text
+
+req = requests.put(url, data={'index': 6, 'name': 'Universidade Federal Fluminense'})
+print req.status_code
+print req.text
+
+req = requests.delete(url + '/5')
+print req.status_code
+print req.text
+
+req = requests.delete(url + '/25')
+print req.status_code
+print req.text
